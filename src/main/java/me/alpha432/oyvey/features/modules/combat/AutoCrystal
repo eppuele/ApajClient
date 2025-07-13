@@ -1,0 +1,102 @@
+package yourclient.modules.combat;
+
+import meteordevelopment.orbit.EventHandler;
+import net.minecraft.block.Blocks;
+import net.minecraft.entity.decoration.EndCrystalEntity;
+import net.minecraft.item.Items;
+import net.minecraft.util.Hand;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
+import yourclient.events.TickEvent;
+import yourclient.modules.Module;
+
+public class AutoCrystal extends Module {
+    private final SettingGroup sgGeneral = settings.getDefaultGroup();
+
+    private final DoubleSetting speed = sgGeneral.add(new DoubleSetting.Builder()
+        .name("crystal-speed")
+        .description("Delay between placements/breaks in ms (lower = faster).")
+        .defaultValue(100)
+        .min(10)
+        .sliderMax(500)
+        .build()
+    );
+
+    private final BoolSetting lootProtect = sgGeneral.add(new BoolSetting.Builder()
+        .name("loot-protect")
+        .description("Prevents breaking or placing crystals for 2 seconds if a player dies within 5 blocks.")
+        .defaultValue(true)
+        .build()
+    );
+
+    private final BoolSetting damageTick = sgGeneral.add(new BoolSetting.Builder()
+        .name("damage-tick")
+        .description("Syncs breaking crystals with Minecraft's damage tick to pop totems perfectly.")
+        .defaultValue(false)
+        .build()
+    );
+
+    private long lastActionTime = 0;
+    private long lootProtectEndTime = 0;
+
+    public AutoCrystal() {
+        super("auto-crystal", "Automatically on right click blows up and places crystals.", Category.Combat);
+    }
+
+    @EventHandler
+    private void onTick(TickEvent.Pre event) {
+        if (!mc.options.useKey.isPressed()) return; // Only work when right click is held
+
+        long currentTime = System.currentTimeMillis();
+
+        // Loot Protect check
+        if (lootProtect.get() && currentTime < lootProtectEndTime) {
+            return;
+        }
+
+        // Check for player deaths nearby (loot protect trigger)
+        mc.world.getPlayers().forEach(player -> {
+            if (player != mc.player && player.isDead()) {
+                if (mc.player.squaredDistanceTo(player) <= 25) { // 5 block radius
+                    lootProtectEndTime = currentTime + 2000; // 2 seconds protect
+                }
+            }
+        });
+
+        // Damage Tick sync logic
+        if (damageTick.get()) {
+            if (mc.world.getTime() % 10 != 0) { // Only act every 10 ticks
+                return;
+            }
+        }
+
+        // Action delay check
+        if (currentTime - lastActionTime < speed.get()) return;
+
+        // Break nearby crystals
+        for (EndCrystalEntity crystal : mc.world.getEntitiesByClass(EndCrystalEntity.class, new Box(mc.player.getPos().add(-6, -6, -6), mc.player.getPos().add(6, 6, 6)), e -> true)) {
+            mc.interactionManager.attackEntity(mc.player, crystal);
+            mc.player.swingHand(Hand.MAIN_HAND);
+            lastActionTime = currentTime;
+            return;
+        }
+
+        // Place crystal if looking at valid block
+        if (mc.crosshairTarget instanceof BlockHitResult blockHit) {
+            BlockPos pos = blockHit.getBlockPos();
+            if (isValidCrystalBlock(pos)) {
+                if (mc.player.getMainHandStack().getItem() == Items.END_CRYSTAL) {
+                    mc.interactionManager.interactItem(mc.player, Hand.MAIN_HAND);
+                    lastActionTime = currentTime;
+                }
+            }
+        }
+    }
+
+    private boolean isValidCrystalBlock(BlockPos pos) {
+        return mc.world.getBlockState(pos).isOf(Blocks.OBSIDIAN)
+            || mc.world.getBlockState(pos).isOf(Blocks.BEDROCK)
+            || mc.world.getBlockState(pos).isSolidBlock(mc.world, pos);
+    }
+}
