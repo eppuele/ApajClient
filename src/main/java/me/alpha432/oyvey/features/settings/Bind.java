@@ -3,8 +3,9 @@ package me.alpha432.oyvey.features.settings;
 import com.google.common.base.Converter;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
+import com.mojang.blaze3d.platform.InputConstants;
 import me.alpha432.oyvey.util.traits.Util;
-import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.input.KeyEvent;
 import org.lwjgl.glfw.GLFW;
 
 public class Bind implements Util {
@@ -33,11 +34,11 @@ public class Bind implements Util {
     public String toString() {
         return this.isEmpty() ? "None" : (this.key < 0
                 ? "None"
-                : this.capitalise(InputUtil.fromKeyCode(this.key, 0).getTranslationKey()));
+                : this.capitalise(InputConstants.getKey(new KeyEvent(this.key, 0, 0)).getName()));
     }
 
     public boolean isDown() {
-        return !this.isEmpty() && GLFW.glfwGetKey(mc.getWindow().getHandle(), this.getKey()) == 1;
+        return !this.isEmpty() && GLFW.glfwGetKey(mc.getWindow().handle(), this.getKey()) == 1;
     }
 
     private String capitalise(String str) {
@@ -60,7 +61,7 @@ public class Bind implements Util {
             }
             int key = -1;
             try {
-                key = InputUtil.fromTranslationKey(s.toUpperCase()).getCode();
+                key = InputConstants.getKey(s.toUpperCase()).getValue();
             } catch (Exception exception) {
                 // empty catch block
             }

@@ -6,7 +6,7 @@ import me.alpha432.oyvey.features.commands.Command;
 import me.alpha432.oyvey.features.modules.Module;
 import me.alpha432.oyvey.features.settings.Setting;
 import me.alpha432.oyvey.manager.ConfigManager;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
 
 public class ModuleCommand
         extends Command {
@@ -20,11 +20,11 @@ public class ModuleCommand
         if (commands.length == 1) {
             ModuleCommand.sendMessage("Modules: ");
             for (Module.Category category : OyVey.moduleManager.getCategories()) {
-                String modules = category.getName() + ": ";
-                for (Module module1 : OyVey.moduleManager.getModulesByCategory(category)) {
-                    modules = modules + (module1.isEnabled() ? Formatting.GREEN : Formatting.RED) + module1.getName() + Formatting.WHITE + ", ";
+                StringBuilder modules = new StringBuilder(category.getName() + ": ");
+                for (Module module : OyVey.moduleManager.getModulesByCategory(category)) {
+                    modules.append(module.isEnabled() ? ChatFormatting.GREEN : ChatFormatting.RED).append(module.getName()).append(ChatFormatting.WHITE).append(", ");
                 }
-                ModuleCommand.sendMessage(modules);
+                ModuleCommand.sendMessage(modules.toString());
             }
             return;
         }
@@ -35,7 +35,7 @@ public class ModuleCommand
                 ModuleCommand.sendMessage("This module doesnt exist.");
                 return;
             }
-            ModuleCommand.sendMessage(" This is the original name of the module. Its current name is: " + module.getDisplayName());
+            ModuleCommand.sendMessage(" This is the original name of the module. Its current name is: %s", module.getDisplayName());
             return;
         }
         if (commands.length == 2) {
@@ -62,10 +62,9 @@ public class ModuleCommand
             return;
         }
         if (commands.length == 5 && (setting = module.getSettingByName(commands[2])) != null) {
-            JsonParser jp = new JsonParser();
             if (setting.getType().equalsIgnoreCase("String")) {
                 setting.setValue(commands[3]);
-                ModuleCommand.sendMessage(Formatting.DARK_GRAY + module.getName() + " " + setting.getName() + " has been set to " + commands[3] + ".");
+                ModuleCommand.sendMessage("{dark_gray} %s %s has been set to %s.", module.getName(), setting.getName(), commands[3]);
                 return;
             }
             try {
@@ -77,12 +76,12 @@ public class ModuleCommand
                         module.disable();
                     }
                 }
-                ConfigManager.setValueFromJson(module, setting, jp.parse(commands[3]));
+                ConfigManager.setValueFromJson(module, setting, JsonParser.parseString(commands[3]));
             } catch (Exception e) {
-                ModuleCommand.sendMessage("Bad Value! This setting requires a: " + setting.getType() + " value.");
+                ModuleCommand.sendMessage("Bad Value! This setting requires a: %s value.", setting.getType());
                 return;
             }
-            ModuleCommand.sendMessage(Formatting.GRAY + module.getName() + " " + setting.getName() + " has been set to " + commands[3] + ".");
+            ModuleCommand.sendMessage("{gray} %s %s has been set tot %s.", module.getName(), setting.getName(), commands[3]);
         }
     }
 }

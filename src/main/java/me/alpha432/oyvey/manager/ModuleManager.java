@@ -7,8 +7,11 @@ import me.alpha432.oyvey.event.impl.Render3DEvent;
 import me.alpha432.oyvey.features.Feature;
 import me.alpha432.oyvey.features.modules.Module;
 import me.alpha432.oyvey.features.modules.client.ClickGui;
-import me.alpha432.oyvey.features.modules.client.HudModule;
+import me.alpha432.oyvey.features.modules.client.HudEditor;
+import me.alpha432.oyvey.features.modules.client.Notifications;
 import me.alpha432.oyvey.features.modules.combat.Criticals;
+import me.alpha432.oyvey.features.modules.hud.Coordinates;
+import me.alpha432.oyvey.features.modules.hud.Watermark;
 import me.alpha432.oyvey.features.modules.misc.MCF;
 import me.alpha432.oyvey.features.modules.movement.ReverseStep;
 import me.alpha432.oyvey.features.modules.movement.Step;
@@ -19,118 +22,56 @@ import me.alpha432.oyvey.features.modules.render.BlockHighlight;
 import me.alpha432.oyvey.util.traits.Jsonable;
 import me.alpha432.oyvey.util.traits.Util;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.*;
+import java.util.stream.Stream;
 
 public class ModuleManager implements Jsonable, Util {
-    public List<Module> modules = new ArrayList<>();
-    public List<Module> sortedModules = new ArrayList<>();
-    public List<String> sortedModulesABC = new ArrayList<>();
+    private final Map<Class<? extends Module>, Module> fastRegistry = new HashMap<>();
+    private final List<Module> modules = new ArrayList<>();
 
     public void init() {
-        modules.add(new HudModule());
-        modules.add(new ClickGui());
-        modules.add(new Criticals());
-        modules.add(new MCF());
-        modules.add(new Step());
-        modules.add(new ReverseStep());
-        modules.add(new FastPlace());
-        modules.add(new Velocity());
-        modules.add(new BlockHighlight());
-        modules.add(new NoFall());
+        register(new Watermark());
+        register(new Coordinates());
+        register(new HudEditor());
+        register(new ClickGui());
+        register(new Notifications());
+        register(new Criticals());
+        register(new MCF());
+        register(new Step());
+        register(new ReverseStep());
+        register(new FastPlace());
+        register(new Velocity());
+        register(new BlockHighlight());
+        register(new NoFall());
     }
 
-    public Module getModuleByName(String name) {
-        for (Module module : this.modules) {
-            if (!module.getName().equalsIgnoreCase(name)) continue;
-            return module;
-        }
-        return null;
+    public void register(Module module) {
+        getModules().add(module);
+        fastRegistry.put(module.getClass(), module);
+    }
+
+    public List<Module> getModules() {
+        return modules;
+    }
+
+    public Stream<Module> stream() {
+        return getModules().stream();
     }
 
     public <T extends Module> T getModuleByClass(Class<T> clazz) {
-        for (Module module : this.modules) {
-            if (!clazz.isInstance(module)) continue;
-            return (T) module;
-        }
-        return null;
+        return (T) fastRegistry.get(clazz);
     }
 
-    public void enableModule(Class<Module> clazz) {
-        Module module = this.getModuleByClass(clazz);
-        if (module != null) {
-            module.enable();
-        }
+    public Module getModuleByName(String name) {
+        return stream().filter(m -> m.getName().equalsIgnoreCase(name)).findFirst().orElse(null);
     }
 
-    public void disableModule(Class<Module> clazz) {
-        Module module = this.getModuleByClass(clazz);
-        if (module != null) {
-            module.disable();
-        }
+    public Module getModuleByDisplayName(String display) {
+        return stream().filter(m -> m.getDisplayName().equalsIgnoreCase(display)).findFirst().orElse(null);
     }
 
-    public void enableModule(String name) {
-        Module module = this.getModuleByName(name);
-        if (module != null) {
-            module.enable();
-        }
-    }
-
-    public void disableModule(String name) {
-        Module module = this.getModuleByName(name);
-        if (module != null) {
-            module.disable();
-        }
-    }
-
-    public boolean isModuleEnabled(String name) {
-        Module module = this.getModuleByName(name);
-        return module != null && module.isOn();
-    }
-
-    public boolean isModuleEnabled(Class<Module> clazz) {
-        Module module = this.getModuleByClass(clazz);
-        return module != null && module.isOn();
-    }
-
-    public Module getModuleByDisplayName(String displayName) {
-        for (Module module : this.modules) {
-            if (!module.getDisplayName().equalsIgnoreCase(displayName)) continue;
-            return module;
-        }
-        return null;
-    }
-
-    public ArrayList<Module> getEnabledModules() {
-        ArrayList<Module> enabledModules = new ArrayList<>();
-        for (Module module : this.modules) {
-            if (!module.isEnabled()) continue;
-            enabledModules.add(module);
-        }
-        return enabledModules;
-    }
-
-    public ArrayList<String> getEnabledModulesName() {
-        ArrayList<String> enabledModules = new ArrayList<>();
-        for (Module module : this.modules) {
-            if (!module.isEnabled() || !module.isDrawn()) continue;
-            enabledModules.add(module.getFullArrayString());
-        }
-        return enabledModules;
-    }
-
-    public ArrayList<Module> getModulesByCategory(Module.Category category) {
-        ArrayList<Module> modulesCategory = new ArrayList<Module>();
-        this.modules.forEach(module -> {
-            if (module.getCategory() == category) {
-                modulesCategory.add(module);
-            }
-        });
-        return modulesCategory;
+    public List<Module> getModulesByCategory(Module.Category category) {
+        return stream().filter(m -> m.getCategory() == category).toList();
     }
 
     public List<Module.Category> getCategories() {
@@ -138,72 +79,49 @@ public class ModuleManager implements Jsonable, Util {
     }
 
     public void onLoad() {
-        this.modules.stream().filter(Module::listening).forEach(EVENT_BUS::register);
-        this.modules.forEach(Module::onLoad);
-    }
-
-    public void onUpdate() {
-        this.modules.stream().filter(Feature::isEnabled).forEach(Module::onUpdate);
+        getModules().forEach(Module::onLoad);
     }
 
     public void onTick() {
-        this.modules.stream().filter(Feature::isEnabled).forEach(Module::onTick);
+        stream().filter(Feature::isEnabled).forEach(Module::onTick);
     }
 
     public void onRender2D(Render2DEvent event) {
-        this.modules.stream().filter(Feature::isEnabled).forEach(module -> module.onRender2D(event));
+        stream().filter(Feature::isEnabled).forEach(module -> module.onRender2D(event));
     }
 
     public void onRender3D(Render3DEvent event) {
-        this.modules.stream().filter(Feature::isEnabled).forEach(module -> module.onRender3D(event));
-    }
-
-    public void sortModules(boolean reverse) {
-        this.sortedModules = this.getEnabledModules().stream().filter(Module::isDrawn)
-                .sorted(Comparator.comparing(module -> mc.textRenderer.getWidth(module.getFullArrayString()) * (reverse ? -1 : 1)))
-                .collect(Collectors.toList());
-    }
-
-    public void sortModulesABC() {
-        this.sortedModulesABC = new ArrayList<>(this.getEnabledModulesName());
-        this.sortedModulesABC.sort(String.CASE_INSENSITIVE_ORDER);
+        stream().filter(Feature::isEnabled).forEach(module -> module.onRender3D(event));
     }
 
     public void onUnload() {
-        this.modules.forEach(EVENT_BUS::unregister);
-        this.modules.forEach(Module::onUnload);
+        getModules().forEach(EVENT_BUS::unregister);
+        getModules().forEach(Module::onUnload);
     }
 
-    public void onUnloadPost() {
-        for (Module module : this.modules) {
-            module.enabled.setValue(false);
-        }
+    public void onKeyPressed(int key) {
+        if (key <= 0 || mc.screen != null) return;
+        stream().filter(module -> module.getBind().getKey() == key).forEach(Module::toggle);
     }
 
-    public void onKeyPressed(int eventKey) {
-        if (eventKey <= 0) return;
-        this.modules.forEach(module -> {
-            if (module.getBind().getKey() == eventKey) {
-                module.toggle();
-            }
-        });
-    }
-
-    @Override public JsonElement toJson() {
+    @Override
+    public JsonElement toJson() {
         JsonObject object = new JsonObject();
-        for (Module module : modules) {
+        for (Module module : getModules()) {
             object.add(module.getName(), module.toJson());
         }
         return object;
     }
 
-    @Override public void fromJson(JsonElement element) {
-        for (Module module : modules) {
+    @Override
+    public void fromJson(JsonElement element) {
+        for (Module module : getModules()) {
             module.fromJson(element.getAsJsonObject().get(module.getName()));
         }
     }
 
-    @Override public String getFileName() {
+    @Override
+    public String getFileName() {
         return "modules.json";
     }
 }

@@ -4,7 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import me.alpha432.oyvey.util.traits.Jsonable;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,8 +16,8 @@ public class FriendManager implements Jsonable {
         return this.friends.stream().anyMatch(friend -> friend.equalsIgnoreCase(name));
     }
 
-    public boolean isFriend(PlayerEntity player) {
-        return this.isFriend(player.getGameProfile().getName());
+    public boolean isFriend(Player player) {
+        return this.isFriend(player.getGameProfile().name());
     }
 
     public void addFriend(String name) {
@@ -32,7 +32,8 @@ public class FriendManager implements Jsonable {
         return this.friends;
     }
 
-    @Override public JsonElement toJson() {
+    @Override
+    public JsonElement toJson() {
         JsonObject object = new JsonObject();
         JsonArray array = new JsonArray();
         for (String friend : friends) {
@@ -42,13 +43,15 @@ public class FriendManager implements Jsonable {
         return object;
     }
 
-    @Override public void fromJson(JsonElement element) {
+    @Override
+    public void fromJson(JsonElement element) {
         for (JsonElement e : element.getAsJsonObject().get("friends").getAsJsonArray()) {
             friends.add(e.getAsString());
         }
     }
 
-    @Override public String getFileName() {
+    @Override
+    public String getFileName() {
         return "friends.json";
     }
 }

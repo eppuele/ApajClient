@@ -4,12 +4,13 @@ import me.alpha432.oyvey.features.modules.Module;
 
 public class ReverseStep extends Module {
     public ReverseStep() {
-        super("ReverseStep", "step but reversed..", Category.MOVEMENT, true, false, false);
+        super("ReverseStep", "step but reversed..", Category.MOVEMENT);
     }
 
-    @Override public void onUpdate() {
+    @Override
+    public void onTick() {
         if (nullCheck()) return;
-        if (mc.player.isInLava() || mc.player.isTouchingWater() || !mc.player.isOnGround()) return;
-        mc.player.addVelocity(0, -1, 0);
+        if (mc.player.isInLava() || mc.player.isInWater() || !mc.player.onGround()) return;
+        mc.player.push(0, -1, 0);
     }
 }

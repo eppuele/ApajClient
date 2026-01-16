@@ -2,7 +2,6 @@ package me.alpha432.oyvey.features.commands.impl;
 
 import me.alpha432.oyvey.OyVey;
 import me.alpha432.oyvey.features.commands.Command;
-import net.minecraft.util.Formatting;
 
 public class FriendCommand
         extends Command {
@@ -40,12 +39,12 @@ public class FriendCommand
             switch (commands[0]) {
                 case "add" -> {
                     OyVey.friendManager.addFriend(commands[1]);
-                    FriendCommand.sendMessage(Formatting.GREEN + commands[1] + " has been friended");
+                    FriendCommand.sendMessage("{aqua} %s has been friended", commands[1]);
                     return;
                 }
                 case "del", "remove" -> {
                     OyVey.friendManager.removeFriend(commands[1]);
-                    FriendCommand.sendMessage(Formatting.RED + commands[1] + " has been unfriended");
+                    FriendCommand.sendMessage("{red} %s has been unfriended", commands[1]);
                     return;
                 }
             }

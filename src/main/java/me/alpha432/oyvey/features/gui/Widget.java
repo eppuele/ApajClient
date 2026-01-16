@@ -7,18 +7,17 @@ import me.alpha432.oyvey.features.modules.client.ClickGui;
 import me.alpha432.oyvey.util.ColorUtil;
 import me.alpha432.oyvey.util.render.RenderUtil;
 import me.alpha432.oyvey.util.render.ScissorUtil;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.sound.SoundEvents;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.sounds.SoundEvents;
 
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Component
+public class Widget
         extends Feature {
-    public static int[] counter1 = new int[]{1};
-    protected DrawContext context;
+    protected GuiGraphics context;
     private final List<Item> items = new ArrayList<>();
     public boolean drag;
     private int x;
@@ -29,19 +28,14 @@ public class Component
     private int height;
     private boolean open;
     private boolean hidden = false;
-    private float fullHeight = Float.NaN;
 
-    public Component(String name, int x, int y, boolean open) {
+    public Widget(String name, int x, int y, boolean open) {
         super(name);
         this.x = x;
         this.y = y;
         this.width = 88;
         this.height = 18;
         this.open = open;
-        this.setupItems();
-    }
-
-    public void setupItems() {
     }
 
     private void drag(int mouseX, int mouseY) {
@@ -52,35 +46,33 @@ public class Component
         this.y = this.y2 + mouseY;
     }
 
-    public void drawScreen(DrawContext context, int mouseX, int mouseY, float partialTicks) {
+    public void drawScreen(GuiGraphics context, int mouseX, int mouseY, float partialTicks) {
         this.context = context;
         this.drag(mouseX, mouseY);
-        counter1 = new int[]{1};
         float totalItemHeight = this.open ? this.getTotalItemHeight() - 2.0f : 0.0f;
-        int color = ColorUtil.toARGB(ClickGui.getInstance().topRed.getValue(), ClickGui.getInstance().topGreen.getValue(), ClickGui.getInstance().topBlue.getValue(), 255);
+        int color = ClickGui.getInstance().topColor.getValue().getRGB();
         context.fill(this.x, this.y - 1, this.x + this.width, this.y + this.height - 6, ClickGui.getInstance().rainbow.getValue() ? ColorUtil.rainbow(ClickGui.getInstance().rainbowHue.getValue()).getRGB() : color);
         if (this.open) {
-            RenderUtil.rect(context.getMatrices(), this.x, (float) this.y + 12.5f, this.x + this.width, (float) (this.y + this.height) + totalItemHeight, 0x77000000);
+            RenderUtil.rect(context, this.x, (float) this.y + 12.5f, this.x + this.width, (float) (this.y + this.height) + totalItemHeight, 0x77000000);
         }
         drawString(this.getName(), (float) this.x + 3.0f, (float) this.y - 4.0f - (float) OyVeyGui.getClickGui().getTextOffset(), -1);
-        ScissorUtil.enable(context, x, 0, x + width, mc.getWindow().getScaledHeight());
+        ScissorUtil.enable(context, x, 0, x + width, mc.getWindow().getGuiScaledHeight());
 
         if (this.open) {
             float y = (float) (this.getY() + this.getHeight()) - 3.0f;
             for (Item item : this.getItems()) {
-                Component.counter1[0] = counter1[0] + 1;
                 if (item.isHidden()) continue;
                 item.setLocation((float) this.x + 2.0f, y);
                 item.setWidth(this.getWidth() - 4);
-                if(item.isHovering(mouseX, mouseY)) {
+                if (item.isHovering(mouseX, mouseY)) {
                     ScissorUtil.disable(context);
                 }
                 item.drawScreen(context, mouseX, mouseY, partialTicks);
 
-                if(item.isHovering(mouseX, mouseY)) {
+                if (item.isHovering(mouseX, mouseY)) {
                     ScissorUtil.enable(context);
                 }
-                y += (float) item.getHeight() + 1.5f;
+                y += (float) item.getHeight() + 2f;
             }
         }
 
@@ -101,7 +93,7 @@ public class Component
         }
         if (mouseButton == 1 && this.isHovering(mouseX, mouseY)) {
             this.open = !this.open;
-            mc.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.UI_BUTTON_CLICK, 1f));
+            mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1f));
             return;
         }
         if (!this.open) {
@@ -120,7 +112,7 @@ public class Component
         this.getItems().forEach(item -> item.mouseReleased(mouseX, mouseY, releaseButton));
     }
 
-    public void onKeyTyped(char typedChar, int keyCode) {
+    public void onKeyTyped(String typedChar, int keyCode) {
         if (!this.open) {
             return;
         }
@@ -191,7 +183,7 @@ public class Component
     private float getTotalItemHeight() {
         float height = 0.0f;
         for (Item item : this.getItems()) {
-            height += (float) item.getHeight() + 1.5f;
+            height += (float) item.getHeight() + 2;
         }
         return height;
     }
@@ -201,6 +193,6 @@ public class Component
     }
 
     protected void drawString(String text, double x, double y, int color) {
-        context.drawTextWithShadow(mc.textRenderer, text, (int) x, (int) y, color);
+        context.drawString(mc.font, text, (int) x, (int) y, color);
     }
 }

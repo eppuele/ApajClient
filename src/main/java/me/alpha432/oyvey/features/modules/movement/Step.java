@@ -2,13 +2,13 @@ package me.alpha432.oyvey.features.modules.movement;
 
 import me.alpha432.oyvey.features.modules.Module;
 import me.alpha432.oyvey.features.settings.Setting;
-import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 
 public class Step extends Module {
     private final Setting<Float> height = num("Height", 2f, 1f, 3f);
 
     public Step() {
-        super("Step", "step..", Category.MOVEMENT, true, false, false);
+        super("Step", "step..", Category.MOVEMENT);
     }
 
     private float prev;
@@ -19,16 +19,18 @@ public class Step extends Module {
             prev = 0.6f;
             return;
         }
-        prev = mc.player.getStepHeight();
+        prev = mc.player.maxUpStep();
     }
 
-    @Override public void onDisable() {
+    @Override
+    public void onDisable() {
         if (nullCheck()) return;
-        mc.player.getAttributeInstance(EntityAttributes.STEP_HEIGHT).setBaseValue(prev);
+        mc.player.getAttribute(Attributes.STEP_HEIGHT).setBaseValue(prev);
     }
 
-    @Override public void onUpdate() {
+    @Override
+    public void onTick() {
         if (nullCheck()) return;
-        mc.player.getAttributeInstance(EntityAttributes.STEP_HEIGHT).setBaseValue(height.getValue());
+        mc.player.getAttribute(Attributes.STEP_HEIGHT).setBaseValue(height.getValue());
     }
 }
